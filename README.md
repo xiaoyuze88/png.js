@@ -1,33 +1,135 @@
-png.js
+
+PNG.js
 ======
-A PNG decoder in JS for the canvas element or Node.js.
 
-## Browser Usage
-Simply include png.js and zlib.js on your HTML page, create a canvas element, and call PNG.load to load an image.
+Forked from https://github.com/devongovett/png.js.
 
-    <canvas></canvas>
-    <script src="zlib.js"></script>
-    <script src="png.js"></script>
-    <script>
-        var canvas = document.getElementsByTagName('canvas')[0];
-        PNG.load('some.png', canvas);
-    </script>
-    
-The source code for the browser version resides in `png.js` and also supports loading and displaying animated PNGs.
-    
-## Node.js Usage
-Install the module using npm
+PNG.js is a PNG decoder fully written in JavaScript. It works in Node.js as
+well as in (modern) browsers.
 
-    sudo npm install png-js
-    
-Require the module and decode a PNG
+Modified a little bit so it can decode `CgBI` format png (Png file that is being [curshed](http://pmt.sourceforge.net/pngcrush/) by XCode in IOS.).
 
-    var PNG = require('png-js');
-    PNG.decode('some.png', function(pixels) {
-        // pixels is a 1d array (in rgba order) of decoded pixel data
-    });
-    
-You can also call `PNG.load` if you want to load the PNG (but not decode the pixels) synchronously.  If you already
-have the PNG data in a buffer, simply use `new PNG(buffer)`.  In both of these cases, you need to call `png.decode`
-yourself which passes your callback the decoded pixels as a buffer.  If you already have a buffer you want the pixels
-copied to, call `copyToImageData` with your buffer and the decoded pixels as returned from `decodePixels`.
+Also added support for Broswerify/Webpack by turning `zlib`(NodeJS) to [browserify-zlib](https://www.npmjs.com/package/browserify-zlib)  so that it can works fine both on NodeJS/Browser.
+
+All apis are the same with the original project.
+
+Make this repo to support my another project [isomorphic-pkg-reader](https://github.com/xiaoyuze88/isomorphic-pkg-reader) which can parse Apks/Ipas in both browser/NodeJS.
+
+Install
+-----
+
+``` js
+npm i isomorphic-png.js
+```
+
+Usage
+-----
+
+``` js
+var PNGReader = require('png.js');
+
+var reader = new PNGReader(bytes);
+reader.parse(function(err, png){
+	if (err) throw err;
+	console.log(png);
+});
+
+```
+
+Or with options:
+
+``` js
+reader.parse({
+	data: false
+}, function(err, png){
+	if (err) throw err;
+	console.log(png);
+});
+
+```
+
+Currently the only option is:
+
+- `data` (*boolean*) - should it read the pixel data, or only the image information.
+
+### PNG object
+
+The PNG object is passed in the callback. It contains all the data extracted
+from the image.
+
+``` js
+// most importantly
+png.getWidth();
+png.getHeight();
+png.getPixel(x, y); // [red, blue, green, alpha]
+// but also
+png.getBitDepth();
+png.getColorType();
+png.getCompressionMethod();
+png.getFilterMethod();
+png.getInterlaceMethod();
+png.getPalette();
+```
+
+Using PNGReader in Node.js
+--------------------------
+
+PNGReader accepts an `Buffer` object, returned by `fs.readFile`, for example:
+
+``` js
+fs.readFile('test.png', function(err, buffer){
+
+	var reader = new PNGReader(buffer);
+	reader.parse(function(err, png){
+		if (err) throw err;
+		console.log(png);
+	});
+
+});
+```
+
+Using PNGReader in the Browser
+------------------------------
+
+PNGReader accepts a byte string, array of bytes or an ArrayBuffer.
+
+For example using FileReader with file input fields:
+
+```js
+var reader = new FileReader();
+
+reader.onload = function(event){
+	var reader = new PNGReader(event.target.result);
+	reader.parse(function(err, png){
+		if (err) throw err;
+		console.log(png);
+	});
+};
+
+fileInputElement.onchange = function(){
+	reader.readAsArrayBuffer(fileInputElement.files[0]);
+	// or, but less optimal
+	reader.readAsBinaryString(fileInputElement.files[0]);
+};
+```
+
+Or instead of using input elements, XHR can also be used:
+
+```js
+var xhr = new XMLHttpRequest();
+xhr.open('GET', 'image.png', true);
+xhr.responseType = 'arraybuffer';
+
+xhr.onload = function(e){
+	if (this.status == 200){
+		var reader = new PNGReader(this.response);
+		reader.parse(function(err, png){
+			if (err) throw err;
+			console.log(png);
+		});
+	}
+};
+
+xhr.send();
+```
+
